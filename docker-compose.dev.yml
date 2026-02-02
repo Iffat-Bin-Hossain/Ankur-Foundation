@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  # Frontend - Next.js with live reload
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - '8080:3000'
+    environment:
+      NODE_ENV: development
+      WATCHPACK_POLLING: 'true'
+    volumes:
+      - ./frontend:/app/frontend
+      - /app/frontend/node_modules
+      - /app/frontend/.next
+    depends_on:
+      - backend
+    restart: unless-stopped
+    container_name: ankur-frontend-dev
+    networks:
+      - ankur-network
+
+  # Backend - Database management
+  backend:
+    build:
+      context: .
+      dockerfile: ./backend/Dockerfile
+    ports:
+      - '3001:3001'
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: file:/app/backend/prisma/dev.db
+    volumes:
+      - ankur-db-data:/app/backend/prisma
+    restart: unless-stopped
+    container_name: ankur-backend-dev
+    networks:
+      - ankur-network
+
+networks:
+  ankur-network:
+    driver: bridge
+
+volumes:
+  ankur-db-data:

@@ -1,0 +1,20 @@
+{
+  "name": "ankur-foundation-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Ankur Foundation - Backend API & Database",
+  "scripts": {
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:studio": "prisma studio",
+    "db:seed": "node database/seeds/seed.js",
+    "db:reset": "prisma db push --force-reset && npm run db:seed"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.7.1"
+  },
+  "devDependencies": {
+    "prisma": "^5.7.1"
+  }
+}

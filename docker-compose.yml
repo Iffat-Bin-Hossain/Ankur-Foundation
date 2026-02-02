@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  # Frontend - Next.js Application
+  frontend:
+    build:
+      context: .
+      dockerfile: ./frontend/Dockerfile
+    ports:
+      - '8080:3000'
+    environment:
+      NODE_ENV: production
+    depends_on:
+      - backend
+    restart: unless-stopped
+    container_name: ankur-frontend
+    networks:
+      - ankur-network
+
+  # Backend - Database & API
+  backend:
+    build:
+      context: .
+      dockerfile: ./backend/Dockerfile
+    ports:
+      - '3001:3001'
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: file:/app/backend/prisma/dev.db
+    volumes:
+      - ankur-db-data:/app/backend/prisma
+    restart: unless-stopped
+    container_name: ankur-backend
+    networks:
+      - ankur-network
+
+networks:
+  ankur-network:
+    driver: bridge
+
+volumes:
+  ankur-db-data:
+    # profiles: ["dev"]
+
+  # Optional: SQLite database volume for persistence
+  ankur-db:
+    image: alpine
+    volumes:
+      - ./prisma:/app/prisma
+    container_name: ankur-foundation-db
+    # This is just for volume management - no service runs
+    command: echo "Database volume container"
+    profiles: ["none"]

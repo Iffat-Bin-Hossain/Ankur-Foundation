@@ -10,14 +10,81 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Note: SQLite doesn't support native enums, using strings instead
+// Valid UserRole values: PRESIDENT, SECRETARY, TREASURER, MEMBER, AUDITOR
+// Valid Permission values defined in /lib/roles.ts
+
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
+  password  String
   name      String?
+  role      String   @default("MEMBER") // PRESIDENT, SECRETARY, TREASURER, MEMBER, AUDITOR
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  isActive  Boolean  @default(true)
+
+  // Relations
+  committees Committee[]
+  auditLogs  AuditLog[]
+  accounts   Account[]
+
+  @@map("users")
+}
+
+model RolePermission {
+  id         String   @id @default(cuid())
+  role       String   // PRESIDENT, SECRETARY, TREASURER, MEMBER, AUDITOR
+  permission String   // See /lib/roles.ts for valid permissions
+  createdAt  DateTime @default(now())
+
+  @@unique([role, permission])
+  @@map("role_permissions")
+}
+
+model Committee {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  president   User     @relation(fields: [presidentId], references: [id])
+  presidentId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  isActive    Boolean  @default(true)
+
+  accounts Account[]
+
+  @@map("committees")
+}
+
+model Account {
+  id          String   @id @default(cuid())
+  name        String
+  accountType String
+  balance     Float    @default(0)
+  committee   Committee @relation(fields: [committeeId], references: [id])
+  committeeId String
+  treasurer   User     @relation(fields: [treasurerId], references: [id])
+  treasurerId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  transactions Transaction[]
+
+  @@map("accounts")
+}
+
+model Transaction {
+  id        String   @id @default(cuid())
+  type      String   // INCOME, EXPENSE
+  amount    Float
+  description String
+  account   Account  @relation(fields: [accountId], references: [id])
+  accountId String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("users")
+  @@map("transactions")
 }
 
 model Post {
@@ -30,4 +97,17 @@ model Post {
   updatedAt DateTime @updatedAt
 
   @@map("posts")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String
+  entity    String
+  entityId  String
+  changes   String?
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  createdAt DateTime @default(now())
+
+  @@map("audit_logs")
 }

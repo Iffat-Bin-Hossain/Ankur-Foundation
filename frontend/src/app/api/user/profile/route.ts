@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { PrismaClient } from '@prisma/client'
 
-// Get user profile
+const prisma = new PrismaClient()
+
 export async function GET(request: NextRequest) {
   try {
     const userId = request.headers.get('x-user-id')
-    
+
     if (!userId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -22,7 +23,6 @@ export async function GET(request: NextRequest) {
         role: true,
         isActive: true,
         createdAt: true,
-        committees: true,
       },
     })
 
@@ -34,8 +34,8 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({ user })
-  } catch (error) {
-    console.error('Error fetching user profile:', error)
+  } catch (error: any) {
+    console.error('Error fetching profile:', error)
     return NextResponse.json(
       { error: 'Failed to fetch profile' },
       { status: 500 }
@@ -43,11 +43,12 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Update user profile
 export async function PATCH(request: NextRequest) {
   try {
     const userId = request.headers.get('x-user-id')
-    
+    const body = await request.json()
+    const { name } = body
+
     if (!userId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -55,10 +56,6 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    const body = await request.json()
-    const { name, email } = body
-
-    // Don't allow changing role/email via this endpoint
     const user = await prisma.user.update({
       where: { id: userId },
       data: {
@@ -66,9 +63,17 @@ export async function PATCH(request: NextRequest) {
       },
     })
 
-    return NextResponse.json({ user })
+    return NextResponse.json({
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isActive: user.isActive,
+      },
+    })
   } catch (error: any) {
-    console.error('Error updating user profile:', error)
+    console.error('Error updating profile:', error)
     return NextResponse.json(
       { error: 'Failed to update profile' },
       { status: 500 }

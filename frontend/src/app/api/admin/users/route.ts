@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { PrismaClient } from '@prisma/client'
 
-// Get all users (President + Auditor only)
+const prisma = new PrismaClient()
+
 export async function GET(request: NextRequest) {
   try {
     const userRole = request.headers.get('x-user-role')
-    
-    if (!userRole || (userRole !== 'PRESIDENT' && userRole !== 'AUDITOR')) {
+
+    // Only PRESIDENT and AUDITOR can view all users
+    if (userRole !== 'PRESIDENT' && userRole !== 'AUDITOR') {
       return NextResponse.json(
-        { error: 'Forbidden: Only President and Auditor can view all users' },
+        { error: 'Forbidden: Only President and Auditor can view users' },
         { status: 403 }
       )
     }
@@ -28,7 +30,7 @@ export async function GET(request: NextRequest) {
     })
 
     return NextResponse.json({ users })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching users:', error)
     return NextResponse.json(
       { error: 'Failed to fetch users' },
@@ -37,11 +39,11 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Deactivate user (President only)
 export async function PATCH(request: NextRequest) {
   try {
     const userRole = request.headers.get('x-user-role')
-    
+
+    // Only PRESIDENT can deactivate users
     if (userRole !== 'PRESIDENT') {
       return NextResponse.json(
         { error: 'Forbidden: Only President can deactivate users' },
@@ -64,7 +66,15 @@ export async function PATCH(request: NextRequest) {
       data: { isActive },
     })
 
-    return NextResponse.json({ user })
+    return NextResponse.json({
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isActive: user.isActive,
+      },
+    })
   } catch (error: any) {
     console.error('Error updating user:', error)
     return NextResponse.json(

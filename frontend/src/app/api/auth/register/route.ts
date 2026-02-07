@@ -1,8 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
-import bcryptjs from 'bcryptjs'
-
-const prisma = new PrismaClient()
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,44 +12,36 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
+    // Use Docker service name for internal communication
+    const backendUrl = process.env.BACKEND_URL || 'http://ankur-backend:3001'
+    
+    const response = await fetch(`${backendUrl}/api/auth/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name,
+        email,
+        password,
+        role,
+      }),
     })
 
-    if (existingUser) {
+    const data = await response.json()
+
+    if (!response.ok) {
       return NextResponse.json(
-        { error: 'User already exists' },
-        { status: 409 }
+        { error: data.error || 'Failed to register user' },
+        { status: response.status }
       )
     }
 
-    const hashedPassword = await bcryptjs.hash(password, 12)
-
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        role,
-      },
-    })
-
-    return NextResponse.json(
-      {
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          isActive: user.isActive,
-        },
-      },
-      { status: 201 }
-    )
+    return NextResponse.json(data, { status: 201 })
   } catch (error: any) {
-    console.error('Registration error:', error)
+    console.error('Registration error:', error.message)
     return NextResponse.json(
-      { error: 'Failed to register user' },
+      { error: error.message || 'Failed to register user' },
       { status: 500 }
     )
   }

@@ -11,9 +11,6 @@ RUN npm ci
 # Copy frontend code
 COPY frontend .
 
-# Generate Prisma client (for types if needed)
-# RUN npm run db:generate 2>/dev/null || true
-
 # Build Next.js
 RUN npm run build
 

@@ -10,6 +10,7 @@ services:
       - '8080:3000'
     environment:
       NODE_ENV: production
+      BACKEND_URL: http://ankur-backend:3001
     depends_on:
       - backend
     restart: unless-stopped
@@ -40,14 +41,5 @@ networks:
 
 volumes:
   ankur-db-data:
+    driver: local
     # profiles: ["dev"]
-
-  # Optional: SQLite database volume for persistence
-  ankur-db:
-    image: alpine
-    volumes:
-      - ./prisma:/app/prisma
-    container_name: ankur-foundation-db
-    # This is just for volume management - no service runs
-    command: echo "Database volume container"
-    profiles: ["none"]

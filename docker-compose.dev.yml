@@ -33,6 +33,8 @@ services:
       NODE_ENV: development
       DATABASE_URL: file:/app/backend/prisma/dev.db
     volumes:
+      - ./backend:/app/backend
+      - /app/backend/node_modules
       - ankur-db-data:/app/backend/prisma
     restart: unless-stopped
     container_name: ankur-backend-dev

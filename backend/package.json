@@ -4,6 +4,8 @@
   "private": true,
   "description": "Ankur Foundation - Backend API & Database",
   "scripts": {
+    "start": "node src/index.js",
+    "dev": "node src/index.js",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
@@ -13,7 +15,11 @@
   },
   "dependencies": {
     "@prisma/client": "^5.7.1",
-    "bcryptjs": "^2.4.3"
+    "bcryptjs": "^2.4.3",
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "jsonwebtoken": "^9.0.0"
   },
   "devDependencies": {
     "prisma": "^5.7.1"

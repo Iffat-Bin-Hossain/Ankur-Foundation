@@ -1,39 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
 
 export async function GET(request: NextRequest) {
   try {
-    const userRole = request.headers.get('x-user-role')
+    const token = request.cookies.get('auth-token')?.value
 
-    // Only PRESIDENT and AUDITOR can view all users
-    if (userRole !== 'PRESIDENT' && userRole !== 'AUDITOR') {
+    if (!token) {
       return NextResponse.json(
-        { error: 'Forbidden: Only President and Auditor can view users' },
-        { status: 403 }
+        { error: 'Authentication required' },
+        { status: 401 }
       )
     }
 
-    const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        isActive: true,
-        createdAt: true,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
+    // Call backend API to get users
+    const backendUrl = process.env.BACKEND_URL || 'http://ankur-backend:3001'
+    const response = await fetch(`${backendUrl}/api/admin/users`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
     })
 
-    return NextResponse.json({ users })
-  } catch (error: any) {
-    console.error('Error fetching users:', error)
+    const data = await response.json()
+
+    if (!response.ok) {
+      return NextResponse.json(data, { status: response.status })
+    }
+
+    return NextResponse.json(data)
+  } catch (error) {
+    console.error('Admin users fetch error:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch users' },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }
@@ -41,40 +39,35 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const userRole = request.headers.get('x-user-role')
+    const token = request.cookies.get('auth-token')?.value
 
-    // Only PRESIDENT can deactivate users
-    if (userRole !== 'PRESIDENT') {
+    if (!token) {
       return NextResponse.json(
-        { error: 'Forbidden: Only President can deactivate users' },
-        { status: 403 }
+        { error: 'Authentication required' },
+        { status: 401 }
       )
     }
 
     const body = await request.json()
-    const { userId, isActive } = body
 
-    if (!userId || isActive === undefined) {
-      return NextResponse.json(
-        { error: 'userId and isActive are required' },
-        { status: 400 }
-      )
+    // Call backend API to update user
+    const backendUrl = process.env.BACKEND_URL || 'http://ankur-backend:3001'
+    const response = await fetch(`${backendUrl}/api/admin/users`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      return NextResponse.json(data, { status: response.status })
     }
 
-    const user = await prisma.user.update({
-      where: { id: userId },
-      data: { isActive },
-    })
-
-    return NextResponse.json({
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        isActive: user.isActive,
-      },
-    })
+    return NextResponse.json(data)
   } catch (error: any) {
     console.error('Error updating user:', error)
     return NextResponse.json(

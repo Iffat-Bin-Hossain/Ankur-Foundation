@@ -1,41 +1,69 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyToken } from '@/lib/jwt'
 
 export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
-  // Skip auth check for public routes
-  const publicRoutes = ['/api/auth/login', '/api/auth/register', '/']
-  if (publicRoutes.some(route => pathname.startsWith(route))) {
+  // Skip middleware for these paths
+  const publicPaths = [
+    '/',
+    '/login',
+    '/signup',
+    '/api/auth/login',
+    '/api/auth/register',
+    '/api/auth/logout',
+    '/_next',
+    '/favicon.ico',
+    '/icons',
+    '/manifest.json',
+    '/sw.js',
+    '/workbox-',
+    '/uploads'
+  ]
+
+  // Check if current path should be skipped
+  if (publicPaths.some(path => pathname.startsWith(path))) {
     return NextResponse.next()
   }
 
-  // Get token from cookies or Authorization header
+  // Protected frontend routes
+  const protectedRoutes = ['/dashboard']
+  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route))
+
+  // For protected frontend routes, check authentication
+  if (isProtectedRoute) {
+    const token = request.cookies.get('auth-token')?.value
+    
+    if (!token) {
+      const loginUrl = new URL('/login', request.url)
+      loginUrl.searchParams.set('redirect', pathname)
+      return NextResponse.redirect(loginUrl)
+    }
+    
+    return NextResponse.next()
+  }
+
+  // Only apply auth check to API routes that need protection
+  if (!pathname.startsWith('/api/')) {
+    return NextResponse.next()
+  }
+
+  // Get token from multiple sources
   const token = 
     request.cookies.get('auth-token')?.value ||
-    request.headers.get('Authorization')?.replace('Bearer ', '')
+    request.headers.get('x-auth-token') ||
+    request.headers.get('authorization')?.replace('Bearer ', '')
 
   if (!token) {
+    console.log('Middleware: No token found for', pathname)
     return NextResponse.json(
       { error: 'Unauthorized: No token provided' },
       { status: 401 }
     )
   }
 
-  const payload = verifyToken(token)
-
-  if (!payload) {
-    return NextResponse.json(
-      { error: 'Unauthorized: Invalid or expired token' },
-      { status: 401 }
-    )
-  }
-
-  // Add user info to request headers for use in route handlers
+  // Add token to request headers for API routes
   const requestHeaders = new Headers(request.headers)
-  requestHeaders.set('x-user-id', payload.id)
-  requestHeaders.set('x-user-email', payload.email)
-  requestHeaders.set('x-user-role', payload.role)
+  requestHeaders.set('x-auth-token', token)
 
   return NextResponse.next({
     request: {
@@ -45,5 +73,14 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/api/:path*'],
+  matcher: [
+    /*
+     * Match all request paths except:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public files (public folder)
+     */
+    '/((?!_next/static|_next/image|favicon.ico|icons|uploads|manifest.json|sw.js).*)',
+  ],
 }

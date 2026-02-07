@@ -1,9 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
-import bcryptjs from 'bcryptjs'
-import { generateToken } from '@/lib/jwt'
-
-const prisma = new PrismaClient()
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,63 +12,34 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email },
+    // Call backend API
+    const backendUrl = process.env.BACKEND_URL || 'http://ankur-backend:3001'
+    const response = await fetch(`${backendUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
     })
 
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Invalid credentials' },
-        { status: 401 }
-      )
+    const data = await response.json()
+
+    if (!response.ok) {
+      return NextResponse.json(data, { status: response.status })
     }
 
-    if (!user.isActive) {
-      return NextResponse.json(
-        { error: 'User account is inactive' },
-        { status: 403 }
-      )
+    // Set JWT token in HTTP-only cookie
+    const nextResponse = NextResponse.json(data, { status: 200 })
+    
+    if (data.token) {
+      nextResponse.cookies.set('auth-token', data.token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60, // 7 days
+        path: '/'
+      })
     }
 
-    const isPasswordValid = await bcryptjs.compare(password, user.password)
-
-    if (!isPasswordValid) {
-      return NextResponse.json(
-        { error: 'Invalid credentials' },
-        { status: 401 }
-      )
-    }
-
-    // Generate JWT token
-    const token = generateToken({
-      id: user.id,
-      email: user.email,
-      role: user.role,
-    })
-
-    const response = NextResponse.json(
-      {
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          isActive: user.isActive,
-        },
-        token,
-      },
-      { status: 200 }
-    )
-
-    // Set httpOnly cookie
-    response.cookies.set('auth-token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60, // 7 days
-    })
-
-    return response
+    return nextResponse
   } catch (error: any) {
     console.error('Login error:', error)
     return NextResponse.json(

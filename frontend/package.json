@@ -4,14 +4,15 @@
   "private": true,
   "description": "Ankur Foundation - NGO Website Frontend",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3000",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 3000",
     "lint": "next lint"
   },
   "dependencies": {
-    "@prisma/client": "^5.7.1",
+    "@prisma/client": "^5.22.0",
     "@radix-ui/react-tabs": "^1.0.4",
+    "@types/nodemailer": "^7.0.9",
     "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -19,6 +20,7 @@
     "lucide-react": "^0.263.1",
     "next": "^14.0.4",
     "next-pwa": "^5.6.0",
+    "nodemailer": "^8.0.0",
     "react": "^18",
     "react-dom": "^18",
     "tailwind-merge": "^3.4.0",
